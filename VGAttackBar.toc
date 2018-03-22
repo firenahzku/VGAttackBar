@@ -1,0 +1,5 @@
+## Version: 1.0
+## Title: Vanguard's Attack Bar
+## Notes: Displays a progress bar for your attack speed. Based on "Attack bar timer" addon for 1.12 version of World of Warcraft.
+## SavedVariables: VGAB
+VGAttackBar.xml
