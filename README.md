@@ -1,4 +1,4 @@
-# Vanguard Attack Bar
+# VG Attack Bar
 
 Accurate player/enemy swing timer addon for World of Warcraft 1.12.
 
