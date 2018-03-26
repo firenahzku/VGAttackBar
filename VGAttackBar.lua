@@ -190,7 +190,7 @@ function VGAB_spellhit(arg1)
 		trs=rs
 		rs = rs-math.mod(rs,0.01)
 		VGAB_Mhrs(trs,"Wand",.7,.1,1)
-	elseif (spell == "Raptor Strike" or spell == "Heroic Strike" or	spell == "Maul" or spell == "Cleave") and VGAB.h2h==true then
+	elseif (spell == "Raptor Strike" or spell == "Heroic Strike" or	spell == "Maul" or spell == "Cleave" or spell == "Slam") and VGAB.h2h==true then
 		hd,ld,ohd,lhd = UnitDamage("player")
 		hd,ld= hd-math.mod(hd,1),ld-math.mod(ld,1)
 		VGAB_currentTime = GetTime();
