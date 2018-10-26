@@ -11,6 +11,7 @@
 
 			this:RegisterEvent("CHAT_MSG_SPELL_SELF_BUFF")
 			this:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")
+			this:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
 
 			this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_SELF_HITS");
 			this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES");
@@ -20,7 +21,7 @@
 		</OnLoad> 
 		<OnEvent>
 			VGAB_event(event)
-			VGEAB_event(event)
+			VGEnemyAB_event(event)
 		</OnEvent> 
 	</Scripts>
 </Frame>
@@ -139,7 +140,7 @@
 	</Layers>
 	<Scripts>
 		<OnUpdate>
-			VGAB_Update()
+			VGAB_UpdateBar()
 		</OnUpdate>
 	</Scripts>
 	<BarTexture file="Interface\TargetingFrame\UI-StatusBar"/>
@@ -148,7 +149,7 @@
 
 <StatusBar name="VGAB_Mhr" inherits="VGABBar" parent="UIParent"/>
 
-<Frame name="VGEAB_Frame" toplevel="true" enableMouse="true" movable = "true" parent="UIParent" hidden="true">
+<Frame name="VGEnemyAB_Frame" toplevel="true" enableMouse="true" movable = "true" parent="UIParent" hidden="true">
 	<Size>
 		<AbsDimension x="206" y="52"/>
 	</Size>
@@ -159,7 +160,7 @@
 			</Offset>
 		</Anchor>
 	</Anchors>
-	<Backdrop name="VGEAB_Backdrop" bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+	<Backdrop name="VGEnemyAB_Backdrop" bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
 		<EdgeSize>
 			<AbsValue val="16"/>
 		</EdgeSize>
@@ -194,6 +195,6 @@
 	</Scripts>
 </Frame>
 
-<StatusBar name="VGEAB_mh" inherits="VGABBar" parent="UIParent"/>
-<StatusBar name="VGEAB_oh" inherits="VGABBar" parent="UIParent"/>
+<StatusBar name="VGEnemyAB_mh" inherits="VGABBar" parent="UIParent"/>
+<StatusBar name="VGEnemyAB_oh" inherits="VGABBar" parent="UIParent"/>
 </Ui>

@@ -1,8 +1,8 @@
 ﻿VGAB_extraAttacks	= 0;
 VGAB_MH_start		= 0.000;
-VGAB_MH_timer		= 0.000;
+VGAB_MH_landsAt		= 0.000;
 VGAB_OH_start		= 0.000;
-VGAB_OH_timer		= 0.000;
+VGAB_OH_landsAt		= 0.000;
 VGAB_MH_speed		= nil;
 VGAB_OH_speed		= nil;
 VGAB_enemy_MH_speed	= 0.000
@@ -50,7 +50,7 @@ CastSpell = VGAB_casspl
 function VGAB_loaded()
 	SlashCmdList["VGAB"] = VGAB_chat;
 	SLASH_VGAB1 = "/vgab";
-	if not(VGAB) then VGAB={} end
+	if (VGAB == nil) then VGAB={} end
 	if VGAB.range == nil then
 		VGAB.range=true
 	end
@@ -62,7 +62,7 @@ function VGAB_loaded()
 	end
 	VGAB_Mhr:SetPoint("LEFT",VGAB_Frame,"TOPLEFT",6,-13)
 	VGAB_MhrText:SetJustifyH("Left")
-	VGEAB_VL()
+	VGEnemyAB_VL()
 end
 
 function VGAB_chat(msg)
@@ -71,10 +71,10 @@ function VGAB_chat(msg)
 		VGAB_reset()
 	elseif msg=="lock" then
 		VGAB_Frame:Hide()
-		VGEAB_Frame:Hide()
+		VGEnemyAB_Frame:Hide()
 	elseif msg=="unlock" then
 		VGAB_Frame:Show()
-		VGEAB_Frame:Show()
+		VGEnemyAB_Frame:Show()
 	elseif msg=="range" then
 		VGAB.range= not(VGAB.range)
 		DEFAULT_CHAT_FRAME:AddMessage('range is'.. VGAB_Boo(VGAB.range));
@@ -105,8 +105,8 @@ end
 function VGAB_reset()
 	onid=0
 	offid=0
-	VGAB_MH_timer = 0.0
-	VGAB_OH_timer = 0.0
+	VGAB_MH_landsAt = 0.0
+	VGAB_OH_landsAt = 0.0
 	VGAB_MH_start = 0.0
 	VGAB_OH_start = 0.0
 	VGAB_extraAttacks = 0
@@ -119,29 +119,58 @@ function VGAB_event(event)
 		elseif ( string.find( arg1, "Fury of Forgewright" ) ) then
 			VGAB_extraAttacks = 2;
 		end
+		-- In case we GAINED a speed-affecting aura
+		local oldMHSpeed = VGAB_MH_speed
+		local oldOHSpeed = VGAB_OH_speed
+		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
+		if (oldMHSpeed ~= VGAB_MH_speed) then
+			VGAB_currentTime = GetTime();
+			local timeLeftMH = (VGAB_MH_landsAt - VGAB_currentTime) / (oldMHSpeed / VGAB_MH_speed)
+			VGAB_MH_landsAt = VGAB_currentTime + timeLeftMH;
+			VGAB_UpdateMHSwingBar(VGAB_currentTime,"Main-hand",0,0,1);
+			if (VGAB_OH_speed ~= nil) then
+				local timeLeftOH = (VGAB_OH_landsAt - VGAB_currentTime) / (oldOHSpeed / VGAB_OH_speed)
+				VGAB_OH_landsAt = VGAB_currentTime + timeLeftOH;
+			end
+		end
+	elseif (event == "CHAT_MSG_SPELL_AURA_GONE_SELF") then
+		-- In case we LOST a speed-affecting aura
+		local oldMHSpeed = VGAB_MH_speed
+		local oldOHSpeed = VGAB_OH_speed
+		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
+		if (oldMHSpeed ~= VGAB_MH_speed) then
+			VGAB_currentTime = GetTime();
+			local timeLeftMH = (VGAB_MH_landsAt - VGAB_currentTime) / (oldMHSpeed / VGAB_MH_speed)
+			VGAB_MH_landsAt = VGAB_currentTime + timeLeftMH;
+			VGAB_UpdateMHSwingBar(VGAB_currentTime,"Main-hand",0,0,1);
+			if (VGAB_OH_speed ~= nil) then
+				local timeLeftOH = (VGAB_OH_landsAt - VGAB_currentTime) / (oldOHSpeed / VGAB_OH_speed)
+				VGAB_OH_landsAt = VGAB_currentTime + timeLeftOH;
+			end
+		end
 	elseif (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") and VGAB.h2h == true then
 		VGAB_currentTime = GetTime();
 		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
-		if (VGAB_currentTime >= VGAB_MH_timer + 0.3) then VGAB_MH_timer = 0 end
-		if (VGAB_currentTime >= VGAB_OH_timer + 0.3) then VGAB_OH_timer = 0 end
-		if (VGAB_MH_timer == 0) then VGAB_MH_timer = VGAB_currentTime; end
-		if (VGAB_OH_timer == 0) then VGAB_OH_timer = VGAB_currentTime; end
-		if (VGAB_OH_speed == nil) then VGAB_OH_timer = VGAB_currentTime + 1000000; end
-		if (VGAB_extraAttacks > 0 or VGAB_MH_timer <= VGAB_OH_timer) then	-- This attack is a main-hand attack
-			-- Print("MH "..VGAB_currentTime.." ("..VGAB_MH_timer.." | "..VGAB_OH_timer..")");
+		if (VGAB_currentTime >= VGAB_MH_landsAt + 0.3) then VGAB_MH_landsAt = 0 end
+		if (VGAB_currentTime >= VGAB_OH_landsAt + 0.3) then VGAB_OH_landsAt = 0 end
+		if (VGAB_MH_landsAt == 0) then VGAB_MH_landsAt = VGAB_currentTime; end
+		if (VGAB_OH_landsAt == 0) then VGAB_OH_landsAt = VGAB_currentTime; end
+		if (VGAB_OH_speed == nil) then VGAB_OH_landsAt = VGAB_currentTime + 1000000; end
+		if (VGAB_extraAttacks > 0 or VGAB_MH_landsAt <= VGAB_OH_landsAt) then	-- This attack is a main-hand attack
+			-- Print("MH "..VGAB_currentTime.." ("..VGAB_MH_landsAt.." | "..VGAB_OH_landsAt..")");
 			if (VGAB_extraAttacks > 0) then VGAB_extraAttacks = VGAB_extraAttacks - 1; end
-			VGAB_Mhrs(VGAB_MH_speed,"Main-hand",0,0,1);
-			VGAB_MH_timer = VGAB_MH_speed + VGAB_currentTime;
 			VGAB_MH_start = VGAB_currentTime;
-			if (VGAB_OH_timer < VGAB_currentTime + 0.2) then
-				VGAB_OH_timer = VGAB_currentTime + 0.2;
+			VGAB_MH_landsAt = VGAB_MH_start + VGAB_MH_speed;
+			if (VGAB_OH_landsAt < VGAB_currentTime + 0.2) then
+				VGAB_OH_landsAt = VGAB_currentTime + 0.2;
 			end
+			VGAB_UpdateMHSwingBar(VGAB_currentTime,"Main-hand",0,0,1)
 		else	-- This attack is an off-hand attack
-			-- Print("OH "..VGAB_currentTime.." ("..VGAB_MH_timer.." | "..VGAB_OH_timer..")");
-			VGAB_OH_timer = VGAB_currentTime + VGAB_OH_speed;
+			-- Print("OH "..VGAB_currentTime.." ("..VGAB_MH_landsAt.." | "..VGAB_OH_landsAt..")");
 			VGAB_OH_start = VGAB_currentTime;
-			if (VGAB_MH_timer < VGAB_currentTime + 0.2) then
-				VGAB_MH_timer = VGAB_currentTime + 0.2;
+			VGAB_OH_landsAt = VGAB_OH_start + VGAB_OH_speed;
+			if (VGAB_MH_landsAt < VGAB_currentTime + 0.2) then
+				VGAB_MH_landsAt = VGAB_currentTime + 0.2;
 			end
 		end
 	elseif (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES" or event == "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE") then
@@ -149,21 +178,22 @@ function VGAB_event(event)
 		if ( string.find( arg1, VGRL_PATTERN_INCOMING_MELEE_PARRY ) or string.find( arg1, VGRL_PATTERN_INCOMING_SPECIALATTACK_PARRY ) ) then	-- Player parried an attack or a special attack
 			VGAB_currentTime = GetTime();
 			-- VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
-			VGAB_MH_swingTimeLeft = VGAB_MH_timer - VGAB_currentTime;
-			VGAB_OH_swingTimeLeft = VGAB_OH_timer - VGAB_currentTime;
+			VGAB_MH_swingTimeLeft = VGAB_MH_landsAt - VGAB_currentTime;
+			VGAB_OH_swingTimeLeft = VGAB_OH_landsAt - VGAB_currentTime;
 			if (VGAB_MH_swingTimeLeft <= VGAB_OH_swingTimeLeft) then
-				if (VGAB_MH_swingTimeLeft / (VGAB_MH_timer - VGAB_MH_start) > 0.6) then
-					VGAB_MH_timer = VGAB_MH_timer - (VGAB_MH_timer - VGAB_MH_start) * 0.4;
-				elseif (VGAB_MH_swingTimeLeft / (VGAB_MH_timer - VGAB_MH_start) >= 0.2) then
-					VGAB_MH_timer = (VGAB_MH_timer - VGAB_MH_start) * 0.2;
+				if (VGAB_MH_swingTimeLeft / (VGAB_MH_landsAt - VGAB_MH_start) > 0.6) then
+					VGAB_MH_landsAt = VGAB_MH_landsAt - (VGAB_MH_landsAt - VGAB_MH_start) * 0.4;
+				elseif (VGAB_MH_swingTimeLeft / (VGAB_MH_landsAt - VGAB_MH_start) >= 0.2) then
+					VGAB_MH_landsAt = (VGAB_MH_landsAt - VGAB_MH_start) * 0.2;
 				end
 			else
-				if (VGAB_OH_swingTimeLeft / (VGAB_OH_timer - VGAB_OH_start) > 0.6) then
-					VGAB_OH_timer = VGAB_OH_timer - (VGAB_OH_timer - VGAB_OH_start) * 0.4;
-				elseif (VGAB_OH_swingTimeLeft / (VGAB_OH_timer - VGAB_OH_start) >= 0.2) then
-					VGAB_OH_timer = (VGAB_OH_timer - VGAB_OH_start) * 0.2;
+				if (VGAB_OH_swingTimeLeft / (VGAB_OH_landsAt - VGAB_OH_start) > 0.6) then
+					VGAB_OH_landsAt = VGAB_OH_landsAt - (VGAB_OH_landsAt - VGAB_OH_start) * 0.4;
+				elseif (VGAB_OH_swingTimeLeft / (VGAB_OH_landsAt - VGAB_OH_start) >= 0.2) then
+					VGAB_OH_landsAt = (VGAB_OH_landsAt - VGAB_OH_start) * 0.2;
 				end
 			end
+			VGAB_UpdateMHSwingBar(VGAB_currentTime,"Main-hand",0,0,1)
 		end
 	elseif event == "CHAT_MSG_SPELL_SELF_DAMAGE" then
 		VGAB_spellhit(arg1)
@@ -185,28 +215,32 @@ function VGAB_spellhit(arg1)
 	if spell == "Auto Shot" and VGAB.range == true then
 		trs=rs
 		rs = rs-math.mod(rs,0.01)
-		VGAB_Mhrs(trs,"Auto Shot["..rs.."s]("..rhd.."-"..rld..")",0,1,0)
+		VGAB_MH_start = GetTime()
+		VGAB_MH_landsAt = GetTime() + trs
+		VGAB_UpdateMHSwingBar(VGAB_MH_start,"Auto Shot["..rs.."s]("..rhd.."-"..rld..")",0,1,0)
 	elseif spell == "Shoot" and VGAB.range==true then
 		trs=rs
 		rs = rs-math.mod(rs,0.01)
-		VGAB_Mhrs(trs,"Wand",.7,.1,1)
+		VGAB_MH_start = GetTime()
+		VGAB_MH_landsAt = GetTime() + trs
+		VGAB_UpdateMHSwingBar(VGAB_MH_start,"Wand",.7,.1,1)
 	elseif (spell == "Raptor Strike" or spell == "Heroic Strike" or	spell == "Maul" or spell == "Cleave" or spell == "Slam") and VGAB.h2h==true then
 		hd,ld,ohd,lhd = UnitDamage("player")
 		hd,ld= hd-math.mod(hd,1),ld-math.mod(ld,1)
-		VGAB_currentTime = GetTime();
+		VGAB_currentTime = GetTime()
 		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
-		if (VGAB_currentTime >= VGAB_MH_timer + 0.3) then VGAB_MH_timer = 0 end
-		if (VGAB_currentTime >= VGAB_OH_timer + 0.3) then VGAB_OH_timer = 0 end
-		if (VGAB_MH_timer == 0) then VGAB_MH_timer = VGAB_currentTime; end
-		if (VGAB_OH_timer == 0) then VGAB_OH_timer = VGAB_currentTime; end
-		if (VGAB_OH_speed == nil) then VGAB_OH_timer = VGAB_currentTime + 1000000; end
-		VGAB_MH_timer = VGAB_currentTime + VGAB_MH_speed;
+		if (VGAB_currentTime >= VGAB_MH_landsAt + 0.3) then VGAB_MH_landsAt = 0 end
+		if (VGAB_currentTime >= VGAB_OH_landsAt + 0.3) then VGAB_OH_landsAt = 0 end
+		if (VGAB_MH_landsAt == 0) then VGAB_MH_landsAt = VGAB_currentTime; end
+		if (VGAB_OH_landsAt == 0) then VGAB_OH_landsAt = VGAB_currentTime; end
+		if (VGAB_OH_speed == nil) then VGAB_OH_landsAt = VGAB_currentTime + 1000000; end
 		VGAB_MH_start = VGAB_currentTime;
-		if (VGAB_OH_timer < VGAB_currentTime + 0.2) then
-			VGAB_OH_timer = VGAB_currentTime + 0.2;
+		VGAB_MH_landsAt = VGAB_MH_start + VGAB_MH_speed;
+		if (VGAB_OH_landsAt < VGAB_currentTime + 0.2) then
+			VGAB_OH_landsAt = VGAB_currentTime + 0.2;
 		end
-		-- Print(VGAB_currentTime.." | "..VGAB_MH_timer.." | "..VGAB_OH_timer)
-		VGAB_Mhrs(VGAB_MH_speed,"Main-hand",0,0,1);
+		-- Print(VGAB_currentTime.." | "..VGAB_MH_landsAt.." | "..VGAB_OH_landsAt)
+		VGAB_UpdateMHSwingBar(VGAB_currentTime,"Main-hand",0,0,1);
 	end
 end
 
@@ -219,33 +253,45 @@ function VGAB_spelldir(spellname)
 		if spellname == "Throw" then
 			trs=rs
 			rs = rs-math.mod(rs,0.01)
-			VGAB_Mhrs(trs-1,"Thrown["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
+			VGAB_MH_start = GetTime() - 1
+			VGAB_MH_landsAt = GetTime() + trs
+			VGAB_UpdateMHSwingBar(VGAB_MH_start,"Thrown["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
 		elseif spellname == "Shoot" then
 			rs =UnitRangedDamage("player")
 			trs=rs
 			rs = rs-math.mod(rs,0.01)
-			VGAB_Mhrs(trs-1,"Wand["..(rs).."s]("..rhd.."-"..rld..")",.5,0,1)
+			VGAB_MH_start = GetTime() - 1
+			VGAB_MH_landsAt = GetTime() + trs
+			VGAB_UpdateMHSwingBar(VGAB_MH_start,"Wand["..(rs).."s]("..rhd.."-"..rld..")",.5,0,1)
 		elseif spellname == "Shoot Bow" then
 			trs = rs
 			rs = rs-math.mod(rs,0.01)
-			VGAB_Mhrs(trs-1,"Bow["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
+			VGAB_MH_start = GetTime() - 1
+			VGAB_MH_landsAt = GetTime() + trs
+			VGAB_UpdateMHSwingBar(VGAB_MH_start,"Bow["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
 		elseif spellname == "Shoot Gun" then
 			trs = rs
 			rs = rs-math.mod(rs,0.01)
-			VGAB_Mhrs(trs-1,"Gun["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
+			VGAB_MH_start = GetTime() - 1
+			VGAB_MH_landsAt = GetTime() + trs
+			VGAB_UpdateMHSwingBar(VGAB_MH_start,"Gun["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
 		elseif spellname == "Shoot Crossbow" then
 			trs=rs
 			rs = rs-math.mod(rs,0.01)
-			VGAB_Mhrs(trs-1,"X-Bow["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
+			VGAB_MH_start = GetTime() - 1
+			VGAB_MH_landsAt = GetTime() + trs
+			VGAB_UpdateMHSwingBar(VGAB_MH_start,"X-Bow["..(rs).."s]("..rhd.."-"..rld..")",1,.5,0)
 		elseif spellname == "Aimed Shot" then
 			trs=rs
 			rs = rs-math.mod(rs,0.01)
-			VGAB_Mhrs(trs-1,"Aiming["..(3).."s]",1,.1,.1) 
+			VGAB_MH_start = GetTime() - 1
+			VGAB_MH_landsAt = GetTime() + trs
+			VGAB_UpdateMHSwingBar(VGAB_MH_start,"Aiming["..(3).."s]",1,.1,.1) 
 		end
 	end
 end
 
-function VGAB_Update()
+function VGAB_UpdateBar()
 	local ttime = GetTime()
 	local left = 0.00
 	tSpark=getglobal(this:GetName().. "Spark")
@@ -265,15 +311,15 @@ function VGAB_Update()
 	end
 end
 
-function VGAB_Mhrs(bartime,text,r,g,b)
+function VGAB_UpdateMHSwingBar(currentTime,text,r,g,b)
 	VGAB_Mhr:Hide()
 	VGAB_Mhr.txt = text
-	VGAB_Mhr.st = GetTime()
-	VGAB_Mhr.et = GetTime() + bartime
+	VGAB_Mhr.st = VGAB_MH_start
+	VGAB_Mhr.et = VGAB_MH_landsAt
 	VGAB_Mhr:SetStatusBarColor(r,g,b)
 	VGAB_MhrText:SetText(text)
 	VGAB_Mhr:SetMinMaxValues(VGAB_Mhr.st,VGAB_Mhr.et)
-	VGAB_Mhr:SetValue(VGAB_Mhr.st)
+	VGAB_Mhr:SetValue(currentTime)
 	VGAB_Mhr:Show()
 end
 
@@ -285,29 +331,29 @@ end
 -- ENEMY BAR CODE --
 --------------------
 
-function VGEAB_VL()
+function VGEnemyAB_VL()
 	if not VGAB.pvp then VGAB.pvp = true end
 	if not VGAB.mob then VGAB.mob = true end
-	VGEAB_mh:SetPoint("LEFT",VGEAB_Frame,"TOPLEFT",6,-13)
-	VGEAB_oh:SetPoint("LEFT",VGEAB_Frame,"TOPLEFT",6,-35)
-	VGEAB_mhText:SetJustifyH("Left")
-	VGEAB_ohText:SetJustifyH("Left")
+	VGEnemyAB_mh:SetPoint("LEFT",VGEnemyAB_Frame,"TOPLEFT",6,-13)
+	VGEnemyAB_oh:SetPoint("LEFT",VGEnemyAB_Frame,"TOPLEFT",6,-35)
+	VGEnemyAB_mhText:SetJustifyH("Left")
+	VGEnemyAB_ohText:SetJustifyH("Left")
 end
 
-function VGEAB_event(event)
+function VGEnemyAB_event(event)
 	if event=="VARIABLES_LOADED" then
-		VGEAB_VL()
+		VGEnemyAB_VL()
 	end
 	if (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_HITS" or event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES") and VGAB.mob == true then
 		VGAB_Standing = true;
-		VGEAB_start(arg1)
+		VGEnemyAB_start(arg1)
 	elseif (event=="CHAT_MSG_COMBAT_HOSTILEPLAYER_HITS" or event=="CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES") and VGAB.pvp then
 		VGAB_Standing = true;
-		VGEAB_start(arg1)
+		VGEnemyAB_start(arg1)
 	end
 end
 
-function VGEAB_start(arg1)
+function VGEnemyAB_start(arg1)
 	local a
 	local b
 	hitter = nil
@@ -315,23 +361,24 @@ function VGEAB_start(arg1)
 	if not hitter then a,b, hitter = string.find (arg1, "(.+) crits you") end
 	if not hitter then a,b, hitter = string.find (arg1, "(.+) misses you")end
 	if not hitter then a,b, hitter = string.find (arg1, "(.+) attacks. You ")end
-	if hitter == UnitName("target") then VGEAB_set(hitter) end
+	if hitter == UnitName("target") then VGEnemyAB_set(hitter) end
+	-- TODO: add code for when your target hits someone else (for healers)
 end
 
-function VGEAB_set(targ)
+function VGEnemyAB_set(targ)
 	VGAB_enemy_MH_speed, VGAB_enemy_OH_speed = UnitAttackSpeed("target")
 	VGAB_enemy_MH_speed = VGAB_enemy_MH_speed - math.mod(VGAB_enemy_MH_speed,0.01)
-	VGEAB_mhs(VGAB_enemy_MH_speed,"Target",1,.1,.1)
+	VGEnemyAB_UpdateMHSwingBar(VGAB_enemy_MH_speed,"Target",1,.1,.1)
 end
 
-function VGEAB_mhs(bartime,text,r,g,b)
-	VGEAB_mh:Hide()
-	VGEAB_mh.txt = text
-	VGEAB_mh.st = GetTime()
-	VGEAB_mh.et = GetTime() + bartime
-	VGEAB_mh:SetStatusBarColor(r,g,b)
-	VGEAB_mhText:SetText(text)
-	VGEAB_mh:SetMinMaxValues(VGEAB_mh.st,VGEAB_mh.et)
-	VGEAB_mh:SetValue(VGEAB_mh.st)
-	VGEAB_mh:Show()
+function VGEnemyAB_UpdateMHSwingBar(bartime,text,r,g,b)
+	VGEnemyAB_mh:Hide()
+	VGEnemyAB_mh.txt = text
+	VGEnemyAB_mh.st = GetTime()
+	VGEnemyAB_mh.et = GetTime() + bartime
+	VGEnemyAB_mh:SetStatusBarColor(r,g,b)
+	VGEnemyAB_mhText:SetText(text)
+	VGEnemyAB_mh:SetMinMaxValues(VGEnemyAB_mh.st,VGEnemyAB_mh.et)
+	VGEnemyAB_mh:SetValue(VGEnemyAB_mh.st)
+	VGEnemyAB_mh:Show()
 end
