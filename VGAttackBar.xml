@@ -19,6 +19,11 @@
 			this:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE");
 			this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_HITS")
 			this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
+
+			this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_CREATURE_HITS")
+			this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_PARTY_HITS")
+			this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_CREATURE_MISSES")
+			this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_PARTY_MISSES")
 		</OnLoad> 
 		<OnEvent>
 			VGAB_event(event)

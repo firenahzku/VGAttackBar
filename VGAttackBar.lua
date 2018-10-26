@@ -120,6 +120,7 @@ function VGAB_event(event)
 			VGAB_extraAttacks = 2;
 		end
 		-- In case we GAINED a speed-affecting aura
+		if (oldMHSpeed == nil) then return end
 		local oldMHSpeed = VGAB_MH_speed
 		local oldOHSpeed = VGAB_OH_speed
 		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
@@ -135,6 +136,7 @@ function VGAB_event(event)
 		end
 	elseif (event == "CHAT_MSG_SPELL_AURA_GONE_SELF" or event == "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE") and VGAB.h2h == true then
 		-- In case we lost a speed-affecting aura or gained a speed-affecting debuff
+		if (oldMHSpeed == nil) then return end
 		local oldMHSpeed = VGAB_MH_speed
 		local oldOHSpeed = VGAB_OH_speed
 		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
@@ -350,6 +352,8 @@ function VGEnemyAB_event(event)
 	elseif (event=="CHAT_MSG_COMBAT_HOSTILEPLAYER_HITS" or event=="CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES") and VGAB.pvp then
 		VGAB_Standing = true;
 		VGEnemyAB_start(arg1)
+	elseif (event=="CHAT_MSG_COMBAT_CREATURE_VS_CREATURE_HITS" or event=="CHAT_MSG_COMBAT_CREATURE_VS_CREATURE_MISSES" or event=="CHAT_MSG_COMBAT_CREATURE_VS_PARTY_HITS" or event=="CHAT_MSG_COMBAT_CREATURE_VS_PARTY_MISSES") then
+		VGEnemyAB_start(arg1)
 	end
 end
 
@@ -359,16 +363,25 @@ function VGEnemyAB_start(arg1)
 	hitter = nil
 	a,b, hitter = string.find (arg1, "(.+) hits you")
 	if not hitter then a,b, hitter = string.find (arg1, "(.+) crits you") end
-	if not hitter then a,b, hitter = string.find (arg1, "(.+) misses you")end
-	if not hitter then a,b, hitter = string.find (arg1, "(.+) attacks. You ")end
+	if not hitter then a,b, hitter = string.find (arg1, "(.+) misses you") end
+	if not hitter then a,b, hitter = string.find (arg1, "(.+) attacks. You ") end
 	if hitter == UnitName("target") then VGEnemyAB_set(hitter) end
-	-- TODO: add code for when your target hits someone else (for healers)
+
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) hits (.+) for") end
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) crits (.+) for") end
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) misses (.+).") end
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) attacks. (.+) dodges.") end
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) attacks. (.+) parries.") end
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) attacks. (.+) blocks.") end
+	if not hitter then a,b, hitter, targetHit = string.find (arg1, "(.+) attacks. (.+) absorbs all the damage.") end
+	if (hitter == UnitName("target") and targetHit == UnitName("targettarget") and UnitIsPlayer("targettarget")) then VGEnemyAB_set(hitter) end
+	if (hitter == UnitName("targettarget") and targetHit == UnitName("target") and UnitIsPlayer("target")) then VGEnemyAB_set(hitter) end
 end
 
 function VGEnemyAB_set(targ)
 	VGAB_enemy_MH_speed, VGAB_enemy_OH_speed = UnitAttackSpeed("target")
 	VGAB_enemy_MH_speed = VGAB_enemy_MH_speed - math.mod(VGAB_enemy_MH_speed,0.01)
-	VGEnemyAB_UpdateMHSwingBar(VGAB_enemy_MH_speed,"Target",1,.1,.1)
+	VGEnemyAB_UpdateMHSwingBar(VGAB_enemy_MH_speed,targ,1,.1,.1)
 end
 
 function VGEnemyAB_UpdateMHSwingBar(bartime,text,r,g,b)
