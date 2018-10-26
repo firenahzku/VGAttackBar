@@ -133,8 +133,8 @@ function VGAB_event(event)
 				VGAB_OH_landsAt = VGAB_currentTime + timeLeftOH;
 			end
 		end
-	elseif (event == "CHAT_MSG_SPELL_AURA_GONE_SELF") then
-		-- In case we LOST a speed-affecting aura
+	elseif (event == "CHAT_MSG_SPELL_AURA_GONE_SELF" or event == "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE") and VGAB.h2h == true then
+		-- In case we lost a speed-affecting aura or gained a speed-affecting debuff
 		local oldMHSpeed = VGAB_MH_speed
 		local oldOHSpeed = VGAB_OH_speed
 		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
