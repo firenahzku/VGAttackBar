@@ -9,5 +9,3 @@ Built on foundation of AttackBar addon for 1.12.
 ## Usage
 
 * `/vgab` - list of commands
-* `/vgst unlock`
-* `/vgst lock`
