@@ -54,8 +54,8 @@ function VGAB_loaded()
 	if VGAB.range == nil then
 		VGAB.range=true
 	end
-	if VGAB.h2h == nil then
-		VGAB.h2h=true
+	if VGAB.playerBars == nil then
+		VGAB.playerBars=true
 	end
 	if VGAB.timer == nil then
 		VGAB.timer=true
@@ -78,9 +78,9 @@ function VGAB_chat(msg)
 	elseif msg=="range" then
 		VGAB.range= not(VGAB.range)
 		DEFAULT_CHAT_FRAME:AddMessage('range is'.. VGAB_Boo(VGAB.range));
-	elseif msg=="h2h" then
-		VGAB.h2h = not(VGAB.h2h)
-		DEFAULT_CHAT_FRAME:AddMessage('H2H is'.. VGAB_Boo(VGAB.h2h));
+	elseif msg=="playerBars" then
+		VGAB.playerBars = not(VGAB.playerBars)
+		DEFAULT_CHAT_FRAME:AddMessage('playerBars is'.. VGAB_Boo(VGAB.playerBars));
 	elseif msg=="timer" then
 		VGAB.timer = not(VGAB.timer)
 		DEFAULT_CHAT_FRAME:AddMessage('timer is'.. VGAB_Boo(VGAB.timer));
@@ -95,7 +95,7 @@ function VGAB_chat(msg)
 		DEFAULT_CHAT_FRAME:AddMessage('Lock- to lock and hide the anchor');
 		DEFAULT_CHAT_FRAME:AddMessage('unlock- to unlock and show the anchor');
 		DEFAULT_CHAT_FRAME:AddMessage('fix- to reset the values should they go awry, wait 5 sec after attacking to use this command');
-		DEFAULT_CHAT_FRAME:AddMessage('h2h- to turn on and off the melee bar(s)');
+		DEFAULT_CHAT_FRAME:AddMessage('playerBars- to turn on and off the player\'s melee bar(s)');
 		DEFAULT_CHAT_FRAME:AddMessage('range- to turn on and off the ranged bar');
 		DEFAULT_CHAT_FRAME:AddMessage('pvp- to turn on and off the enemy player bar(s)');
 		DEFAULT_CHAT_FRAME:AddMessage('mob- to turn on and off the enemy mob bar(s)');
@@ -113,7 +113,7 @@ function VGAB_reset()
 end
 
 function VGAB_event(event)
-	if (event == "CHAT_MSG_SPELL_SELF_BUFF" or event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS") and VGAB.h2h == true then
+	if (event == "CHAT_MSG_SPELL_SELF_BUFF" or event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS") and VGAB.playerBars == true then
 		if ( string.find( arg1, "You gain 1 extra attack" ) ) then
 			VGAB_extraAttacks = 1;
 		elseif ( string.find( arg1, "Fury of Forgewright" ) ) then
@@ -134,7 +134,7 @@ function VGAB_event(event)
 				VGAB_OH_landsAt = VGAB_currentTime + timeLeftOH;
 			end
 		end
-	elseif (event == "CHAT_MSG_SPELL_AURA_GONE_SELF" or event == "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE") and VGAB.h2h == true then
+	elseif (event == "CHAT_MSG_SPELL_AURA_GONE_SELF" or event == "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE") and VGAB.playerBars == true then
 		-- In case we lost a speed-affecting aura or gained a speed-affecting debuff
 		if (oldMHSpeed == nil) then return end
 		local oldMHSpeed = VGAB_MH_speed
@@ -150,7 +150,7 @@ function VGAB_event(event)
 				VGAB_OH_landsAt = VGAB_currentTime + timeLeftOH;
 			end
 		end
-	elseif (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") and VGAB.h2h == true then
+	elseif (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") and VGAB.playerBars == true then
 		VGAB_currentTime = GetTime();
 		VGAB_MH_speed, VGAB_OH_speed = UnitAttackSpeed("player");
 		if (VGAB_currentTime >= VGAB_MH_landsAt + 0.3) then VGAB_MH_landsAt = 0 end
@@ -226,7 +226,7 @@ function VGAB_spellhit(arg1)
 		VGAB_MH_start = GetTime()
 		VGAB_MH_landsAt = GetTime() + trs
 		VGAB_UpdateMHSwingBar(VGAB_MH_start,"Wand",.7,.1,1)
-	elseif (spell == "Raptor Strike" or spell == "Heroic Strike" or	spell == "Maul" or spell == "Cleave" or spell == "Slam") and VGAB.h2h==true then
+	elseif (spell == "Raptor Strike" or spell == "Heroic Strike" or	spell == "Maul" or spell == "Cleave" or spell == "Slam") and VGAB.playerBars==true then
 		hd,ld,ohd,lhd = UnitDamage("player")
 		hd,ld= hd-math.mod(hd,1),ld-math.mod(ld,1)
 		VGAB_currentTime = GetTime()
@@ -300,7 +300,9 @@ function VGAB_UpdateBar()
 	tText=getglobal(this:GetName().. "Tmr")
 	if VGAB.timer==true then
 		left = (this.et-GetTime()) - (math.mod((this.et-GetTime()),.01))
-		tText:SetText("{"..left.."}")
+		local text = left
+		if (this.spd ~= nil) then text = text.." / "..(math.floor(this.spd*100)/100.0) end
+		tText:SetText("{"..text.."}")
 		tText:Show()
 	else
 		tText:Hide()
@@ -380,15 +382,17 @@ end
 
 function VGEnemyAB_set(targ)
 	VGAB_enemy_MH_speed, VGAB_enemy_OH_speed = UnitAttackSpeed("target")
+	local ogSpeed = VGAB_enemy_MH_speed
 	VGAB_enemy_MH_speed = VGAB_enemy_MH_speed - math.mod(VGAB_enemy_MH_speed,0.01)
-	VGEnemyAB_UpdateMHSwingBar(VGAB_enemy_MH_speed,targ,1,.1,.1)
+	VGEnemyAB_UpdateMHSwingBar(VGAB_enemy_MH_speed,ogSpeed,targ,1,.1,.1)
 end
 
-function VGEnemyAB_UpdateMHSwingBar(bartime,text,r,g,b)
+function VGEnemyAB_UpdateMHSwingBar(bartime,ogSpeed,text,r,g,b)
 	VGEnemyAB_mh:Hide()
 	VGEnemyAB_mh.txt = text
 	VGEnemyAB_mh.st = GetTime()
 	VGEnemyAB_mh.et = GetTime() + bartime
+	VGEnemyAB_mh.spd = ogSpeed
 	VGEnemyAB_mh:SetStatusBarColor(r,g,b)
 	VGEnemyAB_mhText:SetText(text)
 	VGEnemyAB_mh:SetMinMaxValues(VGEnemyAB_mh.st,VGEnemyAB_mh.et)
